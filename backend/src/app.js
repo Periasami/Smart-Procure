@@ -5,6 +5,8 @@ const helmet = require("helmet");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
+const testRoutes = require("./routes/testRoutes");
+
 const app = express();
 
 // Security middleware
@@ -24,6 +26,9 @@ app.get("/api/v1/health", (req, res) => {
     status: "healthy",
   });
 });
+
+// Test validation route
+app.use("/api/v1", testRoutes);
 
 // 404 handler
 app.use(notFound);
