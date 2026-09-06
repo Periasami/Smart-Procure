@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
+
 const app = express();
 
 // Security middleware
@@ -21,5 +24,11 @@ app.get("/api/v1/health", (req, res) => {
     status: "healthy",
   });
 });
+
+// 404 handler
+app.use(notFound);
+
+// Centralized error handler
+app.use(errorHandler);
 
 module.exports = app;
