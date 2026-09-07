@@ -7,6 +7,7 @@ const errorHandler = require("./middleware/errorHandler");
 const apiRateLimiter = require("./middleware/rateLimiter");
 
 const testRoutes = require("./routes/testRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -48,6 +49,12 @@ app.get("/api/v1/health", (req, res) => {
 // ===============================
 
 app.use("/api/v1", testRoutes);
+
+// ===============================
+// Authentication Routes
+// ===============================
+
+app.use("/api/v1/auth", authRoutes);
 
 // ===============================
 // 404 Handler
