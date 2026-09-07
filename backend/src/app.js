@@ -5,16 +5,17 @@ const helmet = require("helmet");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 const apiRateLimiter = require("./middleware/rateLimiter");
+const requestLogger = require("./middleware/requestLogger");
 
 const testRoutes = require("./routes/testRoutes");
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
-// ===============================
-// Security Middleware
-// ===============================
+// Request logging
+app.use(requestLogger);
 
+// Security middleware
 app.use(helmet());
 
 app.use(
@@ -23,19 +24,13 @@ app.use(
   })
 );
 
-// Parse JSON request bodies
+// Body parser
 app.use(express.json());
 
-// ===============================
-// Rate Limiting
-// ===============================
-
+// API rate limiting
 app.use("/api/v1", apiRateLimiter);
 
-// ===============================
-// Health Check
-// ===============================
-
+// Health check
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -44,28 +39,16 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// ===============================
-// Test / Validation Routes
-// ===============================
-
+// Test routes
 app.use("/api/v1", testRoutes);
 
-// ===============================
-// Authentication Routes
-// ===============================
-
+// Authentication routes
 app.use("/api/v1/auth", authRoutes);
 
-// ===============================
-// 404 Handler
-// ===============================
-
+// 404 handler
 app.use(notFound);
 
-// ===============================
-// Centralized Error Handler
-// ===============================
-
+// Centralized error handler
 app.use(errorHandler);
 
 module.exports = app;
