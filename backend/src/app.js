@@ -4,21 +4,37 @@ const helmet = require("helmet");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
+const apiRateLimiter = require("./middleware/rateLimiter");
 
 const testRoutes = require("./routes/testRoutes");
 
 const app = express();
 
-// Security middleware
+// ===============================
+// Security Middleware
+// ===============================
+
 app.use(helmet());
 
-// Enable CORS
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 
-// Parse JSON requests
+// Parse JSON request bodies
 app.use(express.json());
 
-// Health check
+// ===============================
+// Rate Limiting
+// ===============================
+
+app.use("/api/v1", apiRateLimiter);
+
+// ===============================
+// Health Check
+// ===============================
+
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -27,13 +43,22 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// Test validation route
+// ===============================
+// Test / Validation Routes
+// ===============================
+
 app.use("/api/v1", testRoutes);
 
-// 404 handler
+// ===============================
+// 404 Handler
+// ===============================
+
 app.use(notFound);
 
-// Centralized error handler
+// ===============================
+// Centralized Error Handler
+// ===============================
+
 app.use(errorHandler);
 
 module.exports = app;
