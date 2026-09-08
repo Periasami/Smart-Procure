@@ -9,7 +9,7 @@ const requestLogger = require("./middleware/requestLogger");
 
 const testRoutes = require("./routes/testRoutes");
 const authRoutes = require("./routes/authRoutes");
-
+const predictionRoutes = require("./routes/predictionRoutes");
 
 const app = express();
 
@@ -19,13 +19,10 @@ app.use(requestLogger);
 // Security middleware
 app.use(helmet());
 
-app.use(
-  cors({
-    origin: "*",
-  })
-);
+// CORS
+app.use(cors({ origin: "*" }));
 
-// Body parser
+// JSON body parser
 app.use(express.json());
 
 // API rate limiting
@@ -46,8 +43,8 @@ app.use("/api/v1", testRoutes);
 // Authentication routes
 app.use("/api/v1/auth", authRoutes);
 
-
-
+// ML prediction routes
+app.use("/api/v1/prediction", predictionRoutes);
 
 // 404 handler
 app.use(notFound);
