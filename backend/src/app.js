@@ -10,6 +10,7 @@ const requestLogger = require("./middleware/requestLogger");
 const testRoutes = require("./routes/testRoutes");
 const authRoutes = require("./routes/authRoutes");
 
+
 const app = express();
 
 // Request logging
@@ -44,6 +45,9 @@ app.use("/api/v1", testRoutes);
 
 // Authentication routes
 app.use("/api/v1/auth", authRoutes);
+
+
+
 
 // 404 handler
 app.use(notFound);
