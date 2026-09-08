@@ -1,0 +1,19 @@
+const ROLES = Object.freeze({
+  FARMER: "FARMER",
+  CENTRE_ADMIN: "CENTRE_ADMIN",
+  SYSTEM_ADMIN: "SYSTEM_ADMIN",
+});
+
+const QUEUE_STATUS = Object.freeze({
+  WAITING: "WAITING",
+  CALLED: "CALLED",
+  PROCESSING: "PROCESSING",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  NO_SHOW: "NO_SHOW",
+});
+
+module.exports = {
+  ROLES,
+  QUEUE_STATUS,
+};

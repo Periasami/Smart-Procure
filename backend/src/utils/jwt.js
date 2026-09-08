@@ -1,16 +1,23 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "smartprocure-development-secret";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
+const env = require("../config/env");
 
 const generateToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
+  if (!env.jwtSecret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  return jwt.sign(payload, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn,
   });
 };
 
 const verifyToken = (token) => {
-  return jwt.verify(token, JWT_SECRET);
+  if (!env.jwtSecret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  return jwt.verify(token, env.jwtSecret);
 };
 
 module.exports = {
