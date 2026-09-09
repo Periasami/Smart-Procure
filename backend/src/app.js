@@ -12,6 +12,8 @@ const queueRoutes = require("./routes/queueRoutes");
 const reschedulingRoutes = require("./routes/reschedulingRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const voiceRoutes = require("./routes/voiceRoutes");
+const missedCallRoutes = require("./routes/missedCallRoutes");
+const gpsRoutes = require("./routes/gpsRoutes");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -19,15 +21,30 @@ const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
 
+// ===============================
+// Security Middleware
+// ===============================
+
 app.use(helmet());
 app.use(cors());
+
+// ===============================
+// Body Parsing Middleware
+// ===============================
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ===============================
+// Request Logger
+// ===============================
+
 app.use(requestLogger);
 
-// Health check
+// ===============================
+// Health Check
+// ===============================
+
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -36,20 +53,48 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// API routes
+// ===============================
+// API Routes
+// ===============================
+
 app.use("/api/v1/auth", authRoutes);
+
 app.use("/api/v1/prediction", predictionRoutes);
+
 app.use("/api/v1/tokens", tokenRoutes);
+
 app.use("/api/v1/centres", centreRoutes);
+
 app.use("/api/v1/schedules", scheduleRoutes);
+
 app.use("/api/v1/recommendations", recommendationRoutes);
+
 app.use("/api/v1/queue", queueRoutes);
+
 app.use("/api/v1/rescheduling", reschedulingRoutes);
+
 app.use("/api/v1/notifications", notificationRoutes);
+
 app.use("/api/v1/voice", voiceRoutes);
 
-// Error handling
+app.use("/api/v1/missed-calls", missedCallRoutes);
+
+app.use("/api/v1/gps", gpsRoutes);
+
+// ===============================
+// 404 Handler
+// ===============================
+
 app.use(notFound);
+
+// ===============================
+// Centralized Error Handler
+// ===============================
+
 app.use(errorHandler);
+
+// ===============================
+// Export App
+// ===============================
 
 module.exports = app;
