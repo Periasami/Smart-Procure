@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -11,6 +10,7 @@ const scheduleRoutes = require("./routes/scheduleRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const queueRoutes = require("./routes/queueRoutes");
 const reschedulingRoutes = require("./routes/reschedulingRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -44,6 +44,7 @@ app.use("/api/v1/schedules", scheduleRoutes);
 app.use("/api/v1/recommendations", recommendationRoutes);
 app.use("/api/v1/queue", queueRoutes);
 app.use("/api/v1/rescheduling", reschedulingRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 // Error handling
 app.use(notFound);
