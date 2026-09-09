@@ -1,6 +1,5 @@
 const { predictWaitingTime } = require("../services/mlService");
-const { successResponse, errorResponse } = require("../utils/response");
-
+const { successResponse } = require("../utils/response");
 const getWaitingTimePrediction = async (req, res, next) => {
   try {
     const prediction = await predictWaitingTime(req.body);
