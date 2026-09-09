@@ -16,4 +16,19 @@ describe("Token API", () => {
     expect(response.body.success).toBe(false);
     expect(response.body.error.code).toBe("UNAUTHORIZED");
   });
+
+  test("create token should reject unauthenticated request even with invalid data", async () => {
+    const response = await request(app)
+      .post("/api/v1/tokens")
+      .send({
+        centreId: -1,
+        scheduleId: 0,
+        cropType: "",
+        quantity: -100
+      });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+  });
 });
