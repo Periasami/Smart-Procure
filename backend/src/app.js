@@ -2,34 +2,29 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 
-const notFound = require("./middleware/notFound");
-const errorHandler = require("./middleware/errorHandler");
-const apiRateLimiter = require("./middleware/rateLimiter");
-const requestLogger = require("./middleware/requestLogger");
-
-const testRoutes = require("./routes/testRoutes");
 const authRoutes = require("./routes/authRoutes");
 const predictionRoutes = require("./routes/predictionRoutes");
 const tokenRoutes = require("./routes/tokenRoutes");
-const queueRoutes = require("./routes/queueRoutes");
 const centreRoutes = require("./routes/centreRoutes");
+const scheduleRoutes = require("./routes/scheduleRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
+
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
+const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
 
-// Request logging
-app.use(requestLogger);
-
 // Security middleware
 app.use(helmet());
+app.use(cors());
 
-// CORS
-app.use(cors({ origin: "*" }));
-
-// JSON body parser
+// Body parsing
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// API rate limiting
-app.use("/api/v1", apiRateLimiter);
+// Request logging
+app.use(requestLogger);
 
 // Health check
 app.get("/api/v1/health", (req, res) => {
@@ -40,23 +35,13 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// Test routes
-app.use("/api/v1", testRoutes);
-
-// Authentication routes
+// API routes
 app.use("/api/v1/auth", authRoutes);
-
-// ML prediction routes
 app.use("/api/v1/prediction", predictionRoutes);
-
-// Token routes
 app.use("/api/v1/tokens", tokenRoutes);
-
-// Queue routes
-app.use("/api/v1/queue", queueRoutes);
-
-// Procurement centre routes
 app.use("/api/v1/centres", centreRoutes);
+app.use("/api/v1/schedules", scheduleRoutes);
+app.use("/api/v1/recommendations", recommendationRoutes);
 
 // 404 handler
 app.use(notFound);
