@@ -11,6 +11,7 @@ const recommendationRoutes = require("./routes/recommendationRoutes");
 const queueRoutes = require("./routes/queueRoutes");
 const reschedulingRoutes = require("./routes/reschedulingRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const voiceRoutes = require("./routes/voiceRoutes");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -45,6 +46,7 @@ app.use("/api/v1/recommendations", recommendationRoutes);
 app.use("/api/v1/queue", queueRoutes);
 app.use("/api/v1/rescheduling", reschedulingRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/voice", voiceRoutes);
 
 // Error handling
 app.use(notFound);
