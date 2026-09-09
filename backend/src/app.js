@@ -10,6 +10,7 @@ const requestLogger = require("./middleware/requestLogger");
 const testRoutes = require("./routes/testRoutes");
 const authRoutes = require("./routes/authRoutes");
 const predictionRoutes = require("./routes/predictionRoutes");
+const tokenRoutes = require("./routes/tokenRoutes");
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.use("/api/v1/auth", authRoutes);
 
 // ML prediction routes
 app.use("/api/v1/prediction", predictionRoutes);
+
+// Token routes
+app.use("/api/v1/tokens", tokenRoutes);
 
 // 404 handler
 app.use(notFound);
