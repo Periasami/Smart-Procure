@@ -18,6 +18,7 @@ const gpsRoutes = require("./routes/gpsRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 const requestLogger = require("./middleware/requestLogger");
+const rateLimiter = require("./middleware/rateLimiter");
 
 const app = express();
 
@@ -40,6 +41,12 @@ app.use(express.urlencoded({ extended: true }));
 // ===============================
 
 app.use(requestLogger);
+
+// ===============================
+// Rate Limiting
+// ===============================
+
+app.use(rateLimiter);
 
 // ===============================
 // Health Check
