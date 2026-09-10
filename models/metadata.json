@@ -1,0 +1,22 @@
+{
+  "best_model": "XGBoost",
+  "features": [
+    "queue_length",
+    "processing_rate",
+    "active_counters",
+    "capacity",
+    "current_arrivals",
+    "hour",
+    "day_of_week",
+    "number_of_tokens",
+    "completed_tokens",
+    "queue_pressure",
+    "utilization_rate",
+    "tokens_per_counter"
+  ],
+  "validation_metrics": {
+    "MAE": 4.448,
+    "RMSE": 10.049,
+    "R2": 0.996
+  }
+}
