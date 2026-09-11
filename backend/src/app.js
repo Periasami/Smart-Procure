@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const authRoutes = require("./routes/authRoutes");
 const predictionRoutes = require("./routes/predictionRoutes");
 const tokenRoutes = require("./routes/tokenRoutes");
+const farmerRoutes = require("./routes/farmerRoutes");
 const centreRoutes = require("./routes/centreRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
@@ -22,35 +23,14 @@ const rateLimiter = require("./middleware/rateLimiter");
 
 const app = express();
 
-// ===============================
-// Security Middleware
-// ===============================
-
 app.use(helmet());
 app.use(cors());
-
-// ===============================
-// Body Parsing Middleware
-// ===============================
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ===============================
-// Request Logger
-// ===============================
-
 app.use(requestLogger);
-
-// ===============================
-// Rate Limiting
-// ===============================
-
 app.use(rateLimiter);
-
-// ===============================
-// Health Check
-// ===============================
 
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
@@ -60,48 +40,21 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// ===============================
-// API Routes
-// ===============================
-
 app.use("/api/v1/auth", authRoutes);
-
 app.use("/api/v1/prediction", predictionRoutes);
-
 app.use("/api/v1/tokens", tokenRoutes);
-
+app.use("/api/v1/farmers", farmerRoutes);
 app.use("/api/v1/centres", centreRoutes);
-
 app.use("/api/v1/schedules", scheduleRoutes);
-
 app.use("/api/v1/recommendations", recommendationRoutes);
-
 app.use("/api/v1/queue", queueRoutes);
-
 app.use("/api/v1/rescheduling", reschedulingRoutes);
-
 app.use("/api/v1/notifications", notificationRoutes);
-
 app.use("/api/v1/voice", voiceRoutes);
-
 app.use("/api/v1/missed-calls", missedCallRoutes);
-
 app.use("/api/v1/gps", gpsRoutes);
 
-// ===============================
-// 404 Handler
-// ===============================
-
 app.use(notFound);
-
-// ===============================
-// Centralized Error Handler
-// ===============================
-
 app.use(errorHandler);
-
-// ===============================
-// Export App
-// ===============================
 
 module.exports = app;

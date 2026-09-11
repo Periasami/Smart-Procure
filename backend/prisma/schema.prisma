@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model centre_crops {
+  centre_id           Int
+  crop_id             Int
+  procurement_centres procurement_centres @relation(fields: [centre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_centre_crops_centre")
+  crops               crops               @relation(fields: [crop_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_centre_crops_crop")
+
+  @@id([centre_id, crop_id])
+}
+
+model crops {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique @db.VarChar(100)
+  created_at   DateTime       @default(now()) @db.Timestamp(6)
+  centre_crops centre_crops[]
+  tokens       tokens[]
+}
+
+model notifications {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token_id   Int?
+  title      String   @db.VarChar(150)
+  message    String
+  type       String?  @db.VarChar(30)
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  tokens     tokens?  @relation(fields: [token_id], references: [id], onUpdate: NoAction, map: "fk_notifications_token")
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_user")
+
+  @@index([user_id], map: "idx_notifications_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model procurement_centres {
+  id              Int             @id @default(autoincrement())
+  name            String          @db.VarChar(150)
+  latitude        Decimal?        @db.Decimal(10, 7)
+  longitude       Decimal?        @db.Decimal(10, 7)
+  capacity        Int             @default(100)
+  processing_rate Int             @default(10)
+  open_time       DateTime?       @db.Time(6)
+  close_time      DateTime?       @db.Time(6)
+  status          String          @default("OPEN") @db.VarChar(20)
+  created_at      DateTime        @default(now()) @db.Timestamp(6)
+  centre_crops    centre_crops[]
+  queue_entries   queue_entries[]
+  schedules       schedules[]
+  tokens          tokens[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model queue_entries {
+  id                  Int                 @id @default(autoincrement())
+  token_id            Int                 @unique
+  centre_id           Int
+  position            Int?
+  status              String              @default("WAITING") @db.VarChar(30)
+  joined_at           DateTime            @default(now()) @db.Timestamp(6)
+  called_at           DateTime?           @db.Timestamp(6)
+  completed_at        DateTime?           @db.Timestamp(6)
+  procurement_centres procurement_centres @relation(fields: [centre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_queue_centre")
+  tokens              tokens              @relation(fields: [token_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_queue_token")
+
+  @@index([centre_id], map: "idx_queue_centre")
+  @@index([status], map: "idx_queue_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model schedules {
+  id                  Int                 @id @default(autoincrement())
+  centre_id           Int
+  schedule_date       DateTime            @db.Date
+  start_time          DateTime            @db.Time(6)
+  end_time            DateTime            @db.Time(6)
+  capacity            Int
+  available_slots     Int
+  created_at          DateTime            @default(now()) @db.Timestamp(6)
+  procurement_centres procurement_centres @relation(fields: [centre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_schedules_centre")
+  tokens              tokens[]
+
+  @@index([centre_id, schedule_date], map: "idx_schedules_centre_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tokens {
+  id                  Int                 @id @default(autoincrement())
+  farmer_id           Int
+  centre_id           Int
+  schedule_id         Int
+  crop_id             Int?
+  token_number        Int
+  status              String              @default("BOOKED") @db.VarChar(30)
+  booking_time        DateTime            @default(now()) @db.Timestamp(6)
+  notifications       notifications[]
+  queue_entries       queue_entries?
+  procurement_centres procurement_centres @relation(fields: [centre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tokens_centre")
+  crops               crops?              @relation(fields: [crop_id], references: [id], onUpdate: NoAction, map: "fk_tokens_crop")
+  users               users               @relation(fields: [farmer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tokens_farmer")
+  schedules           schedules           @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tokens_schedule")
+
+  @@index([centre_id], map: "idx_tokens_centre")
+  @@index([farmer_id], map: "idx_tokens_farmer")
+  @@index([schedule_id], map: "idx_tokens_schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(100)
+  phone         String          @unique @db.VarChar(15)
+  password_hash String?         @db.VarChar(255)
+  role          String          @default("FARMER") @db.VarChar(20)
+  created_at    DateTime        @default(now()) @db.Timestamp(6)
+  notifications notifications[]
+  tokens        tokens[]
+}
