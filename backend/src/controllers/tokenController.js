@@ -16,15 +16,10 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Verify farmer
+    // 1. Verify farmer
     const farmer = await prisma.users.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        id: true,
-        role: true,
-      },
+      where: { id: userId },
+      select: { id: true, role: true },
     });
 
     if (!farmer || farmer.role !== "FARMER") {
@@ -36,11 +31,9 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Verify procurement centre
+    // 2. Verify procurement centre
     const centre = await prisma.procurement_centres.findUnique({
-      where: {
-        id: centreId,
-      },
+      where: { id: centreId },
     });
 
     if (!centre) {
@@ -61,11 +54,9 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Verify schedule
+    // 3. Verify schedule
     const schedule = await prisma.schedules.findUnique({
-      where: {
-        id: scheduleId,
-      },
+      where: { id: scheduleId },
     });
 
     if (!schedule) {
@@ -95,11 +86,9 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Find crop
+    // 4. Verify crop
     const crop = await prisma.crops.findUnique({
-      where: {
-        name: cropType,
-      },
+      where: { name: cropType },
     });
 
     if (!crop) {
@@ -111,7 +100,7 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Prevent duplicate active booking
+    // 5. Prevent duplicate active booking
     const existingToken = await prisma.tokens.findFirst({
       where: {
         farmer_id: userId,
@@ -131,22 +120,25 @@ const createToken = async (req, res, next) => {
       );
     }
 
-    // Find the last token number for this centre
-    const lastToken = await prisma.tokens.findFirst({
-      where: {
-        centre_id: centreId,
-      },
-      orderBy: {
-        token_number: "desc",
-      },
-    });
-
-    const tokenNumber = lastToken
-      ? lastToken.token_number + 1
-      : centreId * 100 + 1;
-
-    // Create token + queue entry + update available slots
+    // 6. Create token + queue entry + reduce slot
     const token = await prisma.$transaction(async (tx) => {
+      /*
+       * Token number is calculated inside the transaction
+       * so token creation and queue creation happen together.
+       */
+      const lastToken = await tx.tokens.findFirst({
+        where: {
+          centre_id: centreId,
+        },
+        orderBy: {
+          token_number: "desc",
+        },
+      });
+
+      const tokenNumber = lastToken
+        ? lastToken.token_number + 1
+        : centreId * 100 + 1;
+
       const newToken = await tx.tokens.create({
         data: {
           farmer_id: userId,
@@ -163,7 +155,7 @@ const createToken = async (req, res, next) => {
         },
       });
 
-      // Find current last queue position
+      // Find the latest queue position
       const lastQueueEntry = await tx.queue_entries.findFirst({
         where: {
           centre_id: centreId,
@@ -173,11 +165,11 @@ const createToken = async (req, res, next) => {
         },
       });
 
-      const position = lastQueueEntry?.position
+      const position = lastQueueEntry
         ? lastQueueEntry.position + 1
         : 1;
 
-      // Add token to queue
+      // Create queue entry
       await tx.queue_entries.create({
         data: {
           token_id: newToken.id,
@@ -199,7 +191,10 @@ const createToken = async (req, res, next) => {
         },
       });
 
-      return newToken;
+      return {
+        ...newToken,
+        queuePosition: position,
+      };
     });
 
     return successResponse(
