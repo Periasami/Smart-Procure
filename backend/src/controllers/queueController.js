@@ -8,6 +8,15 @@ const {
   validateQueueStatus,
 } = require("../services/queueService");
 
+const {
+  emitQueueUpdate,
+  emitQueuePosition,
+  emitQueueStatus,
+  emitCentreCongestion,
+  emitTokenCalled,
+  emitTokenCompleted,
+} = require("../websocket/socketHandler");
+
 // Get queue status for a procurement centre
 const getQueueStatus = async (req, res, next) => {
   try {
@@ -22,11 +31,8 @@ const getQueueStatus = async (req, res, next) => {
       );
     }
 
-    // Get centre information
     const centre = await prisma.procurement_centres.findUnique({
-      where: {
-        id: centreId,
-      },
+      where: { id: centreId },
     });
 
     if (!centre) {
@@ -38,20 +44,12 @@ const getQueueStatus = async (req, res, next) => {
       );
     }
 
-    // Get queue entries from PostgreSQL
     const queueEntries = await prisma.queue_entries.findMany({
-      where: {
-        centre_id: centreId,
-      },
-      orderBy: {
-        position: "asc",
-      },
-      include: {
-        tokens: true,
-      },
+      where: { centre_id: centreId },
+      orderBy: { position: "asc" },
+      include: { tokens: true },
     });
 
-    // Convert DB queue entries into the format expected by queueService
     const tokens = queueEntries.map((entry) => ({
       id: entry.token_id,
       status: entry.status,
@@ -94,14 +92,9 @@ const getMyQueuePosition = async (req, res, next) => {
       );
     }
 
-    // Find token and verify ownership
     const token = await prisma.tokens.findUnique({
-      where: {
-        id: tokenId,
-      },
-      include: {
-        queue_entries: true,
-      },
+      where: { id: tokenId },
+      include: { queue_entries: true },
     });
 
     if (!token) {
@@ -134,14 +127,9 @@ const getMyQueuePosition = async (req, res, next) => {
       );
     }
 
-    // Get all queue entries for the centre
     const queueEntries = await prisma.queue_entries.findMany({
-      where: {
-        centre_id: token.centre_id,
-      },
-      orderBy: {
-        position: "asc",
-      },
+      where: { centre_id: token.centre_id },
+      orderBy: { position: "asc" },
     });
 
     const tokens = queueEntries.map((entry) => ({
@@ -191,11 +179,8 @@ const updateQueueStatus = async (req, res, next) => {
       );
     }
 
-    // Find queue entry
     const queueEntry = await prisma.queue_entries.findUnique({
-      where: {
-        token_id: tokenId,
-      },
+      where: { token_id: tokenId },
     });
 
     if (!queueEntry) {
@@ -207,12 +192,9 @@ const updateQueueStatus = async (req, res, next) => {
       );
     }
 
-    // Update queue entry and token together
     const updatedQueue = await prisma.$transaction(async (tx) => {
       const updatedEntry = await tx.queue_entries.update({
-        where: {
-          token_id: tokenId,
-        },
+        where: { token_id: tokenId },
         data: {
           status,
           ...(status === "CALLED" && {
@@ -224,18 +206,88 @@ const updateQueueStatus = async (req, res, next) => {
         },
       });
 
-      // Keep token status synchronized with queue status
       await tx.tokens.update({
-        where: {
-          id: tokenId,
-        },
-        data: {
-          status,
-        },
+        where: { id: tokenId },
+        data: { status },
       });
 
       return updatedEntry;
     });
+
+    // Socket.IO realtime notifications
+    const io = req.app.get("io");
+
+    if (io) {
+      // Every queue status change
+      emitQueueStatus(io, tokenId, status);
+
+      // Token-specific events
+      if (status === "CALLED") {
+        emitTokenCalled(io, tokenId, {
+          centreId: updatedQueue.centre_id,
+        });
+      }
+
+      if (status === "COMPLETED") {
+        emitTokenCompleted(io, tokenId, {
+          centreId: updatedQueue.centre_id,
+        });
+      }
+
+      // Calculate current position
+      const queueEntries = await prisma.queue_entries.findMany({
+        where: {
+          centre_id: updatedQueue.centre_id,
+        },
+        orderBy: {
+          position: "asc",
+        },
+      });
+
+      const tokens = queueEntries.map((entry) => ({
+        id: entry.token_id,
+        status: entry.status,
+        createdAt: entry.joined_at,
+        position: entry.position,
+      }));
+
+      const position = getTokenPosition(tokens, tokenId);
+
+      emitQueuePosition(io, tokenId, {
+        centreId: updatedQueue.centre_id,
+        position,
+        status,
+      });
+
+      // Updated queue metrics
+      const centre = await prisma.procurement_centres.findUnique({
+        where: {
+          id: updatedQueue.centre_id,
+        },
+      });
+
+      if (centre) {
+        const metrics = calculateQueueMetrics(
+          tokens,
+          centre.capacity,
+          centre.processing_rate
+        );
+
+        emitQueueUpdate(io, updatedQueue.centre_id, {
+          centreId: updatedQueue.centre_id,
+          ...metrics,
+          tokens,
+        });
+
+        emitCentreCongestion(io, updatedQueue.centre_id, {
+          centreId: updatedQueue.centre_id,
+          congestion: metrics.congestion,
+          totalActive: metrics.totalActive,
+          waitingCount: metrics.waitingCount,
+          processingCount: metrics.processingCount,
+        });
+      }
+    }
 
     return successResponse(
       res,
