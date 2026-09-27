@@ -1,8 +1,19 @@
 const bcrypt = require("bcryptjs");
 
 const prisma = require("../config/prisma");
-const { generateToken } = require("../utils/jwt");
+const {
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} = require("../utils/jwt");
 const { successResponse, errorResponse } = require("../utils/response");
+
+const buildUserResponse = (user) => ({
+  id: user.id,
+  name: user.name,
+  phone: user.phone,
+  role: user.role,
+});
 
 const register = async (req, res, next) => {
   try {
@@ -32,27 +43,25 @@ const register = async (req, res, next) => {
       },
     });
 
-    const token = generateToken({
+    const payload = {
       userId: user.id,
       role: user.role,
-    });
+    };
+
+    const token = generateToken(payload);
+    const refreshToken = generateRefreshToken(payload);
 
     return successResponse(
       res,
       {
         token,
-        user: {
-          id: user.id,
-          name: user.name,
-          phone: user.phone,
-          role: user.role,
-        },
+        refreshToken,
+        user: buildUserResponse(user),
       },
       "User registered successfully"
     );
   } catch (error) {
     console.error("REGISTER ERROR:", error);
-    console.error("REGISTER STACK:", error.stack);
     next(error);
   }
 };
@@ -88,51 +97,116 @@ const login = async (req, res, next) => {
       );
     }
 
-    const token = generateToken({
+    const payload = {
       userId: user.id,
       role: user.role,
-    });
+    };
+
+    const token = generateToken(payload);
+    const refreshToken = generateRefreshToken(payload);
 
     return successResponse(
       res,
       {
         token,
-        user: {
-          id: user.id,
-          name: user.name,
-          phone: user.phone,
-          role: user.role,
-        },
+        refreshToken,
+        user: buildUserResponse(user),
       },
       "Login successful"
     );
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    console.error("LOGIN STACK:", error.stack);
     next(error);
   }
 };
 
 const refreshToken = async (req, res, next) => {
   try {
-    return errorResponse(
+    const { refreshToken: token } = req.body;
+
+    if (!token) {
+      return errorResponse(
+        res,
+        "REFRESH_TOKEN_REQUIRED",
+        "Refresh token is required",
+        401
+      );
+    }
+
+    let decoded;
+
+    try {
+      decoded = verifyRefreshToken(token);
+    } catch (error) {
+      return errorResponse(
+        res,
+        "INVALID_REFRESH_TOKEN",
+        "Invalid or expired refresh token",
+        401
+      );
+    }
+
+    const userId = Number(decoded.userId);
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        "INVALID_REFRESH_TOKEN",
+        "Invalid refresh token",
+        401
+      );
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return errorResponse(
+        res,
+        "USER_NOT_FOUND",
+        "User not found",
+        404
+      );
+    }
+
+    const payload = {
+      userId: user.id,
+      role: user.role,
+    };
+
+    const newToken = generateToken(payload);
+    const newRefreshToken = generateRefreshToken(payload);
+
+    return successResponse(
       res,
-      "NOT_IMPLEMENTED",
-      "Refresh token is not implemented yet",
-      501
+      {
+        token: newToken,
+        refreshToken: newRefreshToken,
+        user: buildUserResponse(user),
+      },
+      "Token refreshed successfully"
     );
   } catch (error) {
+    console.error("REFRESH TOKEN ERROR:", error);
     next(error);
   }
 };
 
 const logout = async (req, res, next) => {
   try {
-    return errorResponse(
+    // Stateless JWT setup:
+    // The client must discard both access and refresh tokens.
+    return successResponse(
       res,
-      "NOT_IMPLEMENTED",
-      "Logout is not implemented yet",
-      501
+      {},
+      "Logout successful. Please discard the access and refresh tokens."
     );
   } catch (error) {
     next(error);
@@ -173,14 +247,11 @@ const getMe = async (req, res, next) => {
 
     return successResponse(
       res,
-      {
-        user,
-      },
+      { user },
       "User details retrieved successfully"
     );
   } catch (error) {
     console.error("GET ME ERROR:", error);
-    console.error("GET ME STACK:", error.stack);
     next(error);
   }
 };
